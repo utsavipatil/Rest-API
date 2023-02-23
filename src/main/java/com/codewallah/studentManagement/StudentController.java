@@ -1,5 +1,8 @@
 package com.codewallah.studentManagement;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -9,44 +12,52 @@ import java.util.Map;
 
 @RestController //Must annotation --> To tell Springboot in this class API endpoints are written
 public class StudentController { //Student Related APIs
-    //Make database
-    HashMap<Integer, Student> studentDB = new HashMap<>(); //Define a database
+
+    @Autowired //Automatically take care of StudentService object creation
+    StudentService studentService; //Object has been created --> so that it can call functions
 
     @PostMapping("/addStudent") //Add Student
-    public String addStudent(@RequestBody() Student student){
-        int admNo = student.admNo;
-        studentDB.put(admNo , student); //Add to database
-        return("Student has been created successfully");
+    public ResponseEntity<String> addStudent(@RequestBody() Student student){
+        String response = studentService.addStudent(student);
+        return new ResponseEntity<>(response,HttpStatus.CREATED);
     }
     @GetMapping("/getByAdmNo") //Get Student Object from admNo
-    public Student getStudentByAdmNo(@RequestParam("admNo") int admNo){
-        Student student = studentDB.get(admNo);
-        return student;
+    public ResponseEntity<Student> getStudentByAdmNo(@RequestParam("admNo") int admNo){
+        //Call service layer
+        Student resultStudent = studentService.getStudentByAdmNo(admNo);
+        if(resultStudent == null){
+            return new ResponseEntity<>(resultStudent , HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(resultStudent , HttpStatus.FOUND);
     }
 
     @GetMapping("/getAllStudents") //Get list of all Students
     public List<Student> getAllStudents(){
-        List<Student> list = new ArrayList<>();
-        for(Map.Entry<Integer,Student> mapElement : studentDB.entrySet()){
-            int admNo = mapElement.getKey();
-            Student s = mapElement.getValue();
-            list.add(s);
-        }
+        List<Student> list = studentService.getAllStudents();
         return list;
     }
 
     @GetMapping("/getByName") //Get Student details by name
     public List<Student> getByName(@RequestParam("requestName") String requestName){
-        List<Student> list = new ArrayList<>();
-        for(Map.Entry<Integer,Student> mapElement : studentDB.entrySet()){
-            String studentName = mapElement.getValue().name;
-//            System.out.println(studentName);
-            if(studentName.equals(requestName)){
-                list.add(mapElement.getValue());
-                System.out.println(list);
-            }
-        }
+        List<Student> list = studentService.getStudentByName(requestName);
         return list;
     }
 
+    //Path Variable
+    @GetMapping("getByPath/{admNo}")
+    public Student getByPath(@PathVariable("admNo") Integer admNo){
+        Student student = studentService.getStudentByAdmNo(admNo); //Calling Service Layer (We are utilizing functions from service layer)
+        return student;
+    }
+
+    @PutMapping("/updateStudent")
+    public ResponseEntity<Student> updateStudent(@RequestBody() Student student){
+        return new ResponseEntity<>(studentService.updateStudent(student) , HttpStatus.ACCEPTED);
+    }
+
+    //Return with Status code
+    @DeleteMapping("deleteStudent")
+    public ResponseEntity<String> deleteStudent(@RequestParam("admNo") int admNo){
+        return new ResponseEntity<>(studentService.deleteStudent(admNo) , HttpStatus.OK);
+    }
 }
